@@ -87,7 +87,7 @@ my_project_dir
 ├── <b>Samples_barcodes.csv</b>
 ├── transcriptome-scpipe.Rmd
 ├── transcriptome-scpipe.Rproj
-├── LICENSE.txt
+├── LICENSE
 └── README.md
 </pre>
 
