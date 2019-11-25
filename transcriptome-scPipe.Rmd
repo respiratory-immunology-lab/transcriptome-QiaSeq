@@ -219,7 +219,7 @@ The previsously generated files will be used for UMI deduplication and to genera
 **Note**: This takes >10 hours, leave it overnight!
 
 ```{r counting, eval=F}
-sc_gene_counting(outdir='data', 
+sc_gene_counting(outdir='demultiplexed', 
                  bc_anno='Samples_barcodes.csv',
                  UMI_cor = 2,
                  gene_fl = FALSE)
@@ -270,7 +270,7 @@ sce.qc <- remove_outliers(sce)
 dim(sce.qc)
 
 # Save data
-saveRDS(sce.qc, 'data/gene_counts.rds')
+fwrite(counts(sce.qc), 'data/gene_count_filtered.csv', quote = FALSE, sep = ',')
 ```
 
 ## Wrapping Up
