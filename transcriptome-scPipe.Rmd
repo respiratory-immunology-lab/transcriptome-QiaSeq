@@ -1,0 +1,289 @@
+---
+title: 'scPipe pipeline'
+output: html_document
+---
+
+```{r knitr, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Copyright (c) 2019 Respiratory Immunology lab, Monash University, Melbourne, Australia.
+
+Converting RNA sequences from FASTQ files to a gene count table using the scPipe pipeline (R package `scPipe`). Full package documentation is available at https://github.com/LuyiTian/scPipe and original article can be found [here](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006361).
+
+The full documentation on required files and preparation is available in the README.md file and at https://github.com/respiratory-immunology-lab/transcriptome-scPipe/README.md.
+
+## Project Information
+
+Analysis author: (ex: my name, my.name@xy.com)
+
+Investigators: (ex: my name, my.name@xy.com)
+
+Date: 
+
+Project: (ex: Myproject)
+
+#### Sequencing Details
+
+Run ID: (ex: run01)
+
+Type: (ex: bacterial 16S rRNA gene amplicons v1-v2/F27-R338)
+
+Platform: (ex: Illumina NextSeq)
+
+Kit: (ex: Illumina NextSeq 500/550 High-Output v2.5 Kit (R1 100 cycles, Index 6 cycles, R2 50 cycles))
+
+Date: 
+
+Place: (ex: Lambda sequencing facility)
+
+## Environment setup
+
+Make sure you installed all required libaries **after** launching the `.Rproj` file and initialization with packrat using `packrat::init()`. Packrat will install packages into the `packrat/lib` directory. This takes a while but will not repeat after first installation.
+
+```{r packrat initialisation, eval=T}
+# Initialise packrat
+packrat::init(project = '.', infer.dependencies = FALSE)
+```
+
+*You only need to run this chunk once.*
+
+```{r packages installation, eval=F, include=F}
+# Install required packages via Bioconductor
+if (!requireNamespace('BiocManager', quietly = TRUE))
+    install.packages('BiocManager')
+BiocManager::install('Rsubread')
+
+# Install required packages via CRAN
+install.packages(c('evaluate', 'digest', 'highr', 'markdown', 'stringr', 'yaml', 'Rcpp', 'htmltools', 'knitr', 'jsonlite', 'base64enc', 'mime', 'rmarkdown','devtools', 'foreach', 'doParallel'))
+
+# Install required packages via devtools
+devtools::install_github('LuyiTian/scPipe')
+```
+
+*You need to run this chunk every time to load required packages.*
+
+```{r environment setup, eval=T}
+# Load required R librairies
+version$version.string
+version$platform
+
+suppressMessages(library(Rsubread)); packageVersion('Rsubread')
+suppressMessages(library(evaluate)); packageVersion('evaluate')
+suppressMessages(library(digest)); packageVersion('digest')
+suppressMessages(library(highr)); packageVersion('highr')
+suppressMessages(library(markdown)); packageVersion('markdown')
+suppressMessages(library(stringr)); packageVersion('stringr')
+suppressMessages(library(yaml)); packageVersion('yaml')
+suppressMessages(library(Rcpp)); packageVersion('Rcpp')
+suppressMessages(library(htmltools)); packageVersion('htmltools')
+suppressMessages(library(knitr)); packageVersion('knitr')
+suppressMessages(library(jsonlite)); packageVersion('jsonlite')
+suppressMessages(library(base64enc)); packageVersion('base64enc')
+suppressMessages(library(mime)); packageVersion('mime')
+suppressMessages(library(rmarkdown)); packageVersion('rmarkdown')
+suppressMessages(library(foreach)); packageVersion('foreach')
+suppressMessages(library(doParallel)); packageVersion('doParallel')
+suppressMessages(library(scPipe)); packageVersion('scPipe')
+
+# Parallelization
+cores <- detectCores()
+nc <- cores[1]
+if (nc > 3) {
+  nc <- nc-1  # leave 1 core free if > 3 cores availables
+}
+cl <- makeCluster(nc)
+registerDoParallel(cl)
+paste(nc, 'cores used')
+
+# Set seed for pseudo-random numbers generation
+set.seed(2)
+```
+
+## Merge fastq files
+
+Illumina NextSeq machines have four physical lanes and produces eight fastq files per sample, i.e. four R1 and four R2 fastq files. Because we are running the same library on the different lanes, we will first concatenate all R1 and all R2 files together, respectively. Typically, the concatenated files are ~20GB for R1 and ~10GB for R2.
+
+```{bash, eval=F}
+# bash
+cat run_data/*R1*fastq.gz > run_data/combined_R1.fastq.gz
+cat run_data/*R2*fastq.gz > run_data/combined_R2.fastq.gz
+```
+
+## Fastq filtering and reformatting
+
+The scPipe workflow begins with paired-end FASTQ data which is passed to the function `sc_trim_barcode`, which reformats the reads by trimming the barcode and UMI from the reads and moving this information into the read header `@[barcode_sequence]*[UMI_sequence]#[readname] …`. There are options to perform some basic filtering in this step, including removing reads with low quality sequence in the barcode and UMI regions and filtering out low complexity reads, most of which are non-informative repetitive sequences such as polyA. The output FASTQ file contains transcript sequences, with barcode information merged into the read names. 
+
+If using the *Qiagen UPX transcriptomics kit* on a Illumina NextSeq platform (without custom primers), the run settings are as following: 
+
+- R1: 100 cycles
+- Single index: 6 cycles
+- R2: 50 cycles
+
+Fastq files are already demultiplexed based on <plate_index_6bp> sequences. A list of the Index sequences for this kit can be found on [Google Drive](https://drive.google.com/file/d/1i68FUhj8eRmY58NPGOue4cJz-uW06hA9/view?usp=sharing).
+
+R2 structure is as following: QIAseq 25mer uPCR adapter, 10mer cell index (see `Cell_ID_Sequences.csv`), 12bp UMI, and ACG:
+
+**<AAGCAGTGGTATCAACGCAGAGTAC_25bp><cell_index_10bp><UMI_12bp><ACG>**
+
+`bs1=-1`, `bl1=0` means we don’t have an index in read 1 so we set a negative value as its start position and give it zero length.` bs2=25`, `bl2=10` means we have an index in R2 which starts at position 25 in the read and is 10 bases long. `us=35`, `ul=12` means we have a UMI at position 35 of R2 which is 12 bases long. 
+
+**Note**: It is a zero based index system, so the indexing of the sequence starts at zero!
+
+```{r reformatting, eval=F}
+fq_R1 <- 'run_data/combined_R1.fastq.gz'
+fq_R2 <- 'run_data/combined_R2.fastq.gz'
+
+# Trim barcodes and create fastq file
+sc_trim_barcode('run_data/combined_R1R2.fastq.gz',
+                fq_R1,
+                fq_R2,
+                read_structure = list(bs1=-1, bl1=0, bs2=25, bl2=10, us=35, ul=12),
+                filter_settings = list(rmlow = TRUE, rmN = TRUE, minq = 20, numbq = 2))
+```
+
+## Genome indexing
+
+Before assembly, we first need to index the human reference genome for further usage using the `Rsubread` package. This is a once-off operation for each reference genome, as the same index file can be used for multiple projects and stored. The Ensembl human genome DNA fasta files and Gene sets GFF3 files can be found [here](https://asia.ensembl.org/info/data/ftp/index.html). All files are available on my [Google Drive](https://drive.google.com/open?id=1tGuYByOP-iztPQnNoFF56owdlWeGC3JG).
+
+**Note**: `buildindex` function needs 15GB of memory to build a full index for human/mouse genome. A gapped index is recommended for use on a personal computer, which typically has 16GB of memory or less. In addition, is advised to save your working environment and restart R before running the alignment, as the function easily crashes.
+
+```{r indexing, eval=F}
+# Indexing
+# Replace by the right path to your reference database
+db.fp <- '~/celine.pattaroni@monash.edu/03_Bioinformatics/Databases/Human/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz'
+buildindex(basename='Homo_sapiens.GRCh38.dna.primary_assembly_index', reference=db.fp)
+```
+
+## Reads alignment
+
+The next stage of preprocessing involves sequence alignment. By default, scPipe uses R based `Rsubread` aligner. It performs local read alignment and reports the largest mappable region for each read, with unmapped read bases being soft-clipped. Its unique seed-and-vote design makes it suitable for RNA-seq as well as for genomic DNA sequencing experiments.
+
+**Note**: `align` function needs 17.8GB of memory for read mapping. If a gap index has been created in the previous step, it is possible to use less memory. In addition, is advised to save your working environment and restart R before running the alignment, as the function easily crashes.
+
+```{r alignment, eval=F}
+# Alignment
+# Replace by the right path to your index files
+align(index='/home/celinepattaroni/celine.pattaroni@monash.edu/03_Bioinformatics/Databases/Human/Indexing/Homo_sapiens.GRCh38.dna.primary_assembly_index',
+      readfile1='run_data/combined_R1R2.fastq.gz',
+      output_file='alignment/out.aln.bam', nthreads=nc)
+```
+
+## Exon mapping
+
+Aligned reads in the BAM file are then assigned to exons by the `sc_exon_mapping` function according to a user provided annotation. This function records the mapping result, together with the UMI and cell barcodes available from the optional fields of the BAM file with specific BAM tags. By default we use the official BAM tag BC for cell barcode and OX for UMI sequence. It is important to specify barcode and UMI length in this function.
+
+```{r mapping, eval=F}
+# Path to annotation file
+# Replace by the right path to your annotation file
+an.fp <- '~/celine.pattaroni@monash.edu/03_Bioinformatics/Databases/Human/Homo_sapiens.GRCh38.98.gff3.gz'
+
+# Exon mapping
+sc_exon_mapping(inbam = 'alignment/out.aln.bam',
+                outbam = 'alignment/out.map.bam',
+                bc_len = 10,
+                UMI_len = 12,
+                annofn = an.fp,
+                nthreads = nc)
+```
+
+## Demultiplexing
+
+Next, the `sc_demultiplex function` is used to demultiplex results per sample using the sample barcode information located in the `Samples_barcodes.csv` file. It allows for mismatches during the cell barcode matching step. A template for the Qiagen UPX transcriptomics kit can be found on [Google Drive](https://drive.google.com/file/d/1MQtRGfdJSjdvb8NeWTaA8_fcV82NiDZm/view?usp=sharing). The function to split the reads into separate .csv files for each cell in the `/count` subfolder. Each file contains three columns and each row corresponds to a distinct read. The first column contains the gene ID that the read maps to, the second column gives the UMI sequence for that read and the third column is the distance to the transcript end position (TES) in bp. 
+
+**Note**: The nthreads option has a bug, so we need to set nthreads = 1.
+
+```{r demultiplexing, eval=F}
+# Demultiplexing
+sc_demultiplex(inbam = 'alignment/out.map.bam', 
+               outdir = 'demultiplexed',
+               has_UMI = TRUE,
+               bc_anno = 'Samples_barcodes.csv', 
+               nthreads = 1)
+```
+
+```{r}
+# Print demultiplexing results
+counts <- read.csv('demultiplexed/stat/cell_stat.csv', header = TRUE)
+p <- ggplot(counts, aes(x=cell_id, y=mapped_to_exon)) +
+  geom_bar(stat='identity') +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(title = 'Reads mapped to exons', x = 'Samples', y = 'Reads', fill = NULL)
+p
+```
+
+## Gene count
+
+The previsously generated files will be used for UMI deduplication and to generate a gene count matrix by calling the `sc_gene_counting` function. The gene count matrix is available as a .csv file in `gene_count.csv` and quality control statistics are saved in the `stat` folder. These data are useful for later quality control (QC). Here, we use option 2 for UMI correction that groups all UMIs that mapped to the same genes and in the same positions are grouped together and duplicated UMIs are removed. It is possible to remove low abundance genes by setting `gene_fl=TRUE` but this can also be done downstream.
+
+**Note**: This takes >10 hours, leave it overnight!
+
+```{r counting, eval=F}
+sc_gene_counting(outdir='data', 
+                 bc_anno='Samples_barcodes.csv',
+                 UMI_cor = 2,
+                 gene_fl = FALSE)
+```
+
+## Quality check
+
+We will first create a SingleCellExperiment object from the output of scPipe preprocessing using `create_sce_by_di`r function, that will read in the gene count matrix together with the QC information available in the stat folder. 
+
+```{r quality check, eval=T}
+# Create sce object
+sce <- create_sce_by_dir('demultiplexed')
+dim(sce)
+
+# Create quality/stats files
+sc_sample_qc <- QC_metrics(sce)
+cell_barcode_matching <- demultiplex_info(sce)
+UMI_duplication <- UMI_dup_info(sce)
+```
+
+We first generate a bar plot that shows the percentage of reads that uniquely match to the cell barcodes, as well as the unmatched proportion of reads and their alignment rates to introns and exons. If we observe a large proportion of unmatched reads that map to exons, this indicates a failure of the cell barcode demultiplexing.
+
+```{r}
+plot_demultiplex(sce)
+```
+
+A second plot shows the duplication rate which can be used to evaluate read deapth. UMIs are routinely used to mark individual molecules and after PCR amplification, the same molecule with have multiple copys, which can be identified and removed if they are observed to have the same UMI sequence. Therefore, the copy number of UMIs is an indication of the PCR amplification rate.
+
+```{r}
+plot_UMI_dup(sce)
+```
+
+Next we calculate QC metrics and use the `detect_outlier` function to identify poor quality samples. This function has argument `comp` to define the maximum component of the gaussian mixture model. Using the default value of 1 should be sufficient, but in cases where the data are heterogeneous in terms of quality control metrics, setting this value to 2 or 3 can give better results. I recommend using 2 for maximum quality. More samples will be classified low quality as you increase comp. This function will remove low quality samples if `type='low'`. The `conf` argument specifies the lower and upper confidence intervals for outliers and `detect_outlier` is insensistive to the interval values.
+
+```{r outliers, eval=T, warning=F}
+# Calculate QC metrics
+sce <- calculate_QC_metrics(sce)
+
+# Detect outliers and print sample names of outliers
+sce <- detect_outlier(sce, type = c('low'), comp = 2)
+rownames(QC_metrics(sce)[which(QC_metrics(sce)$outliers==TRUE),])
+
+# Plot stats for the selected samples vs outliers
+plot_QC_pairs(sce)
+
+# Update object
+sce.qc <- remove_outliers(sce)
+dim(sce.qc)
+
+# Save data
+saveRDS(sce.qc, 'data/gene_counts.rds')
+```
+
+## Wrapping Up
+
+Finally, create a html report and archive it along with final data, figures, packrat .lock and package sources as well as this R Notebook. Intermediate files and compiled R libraries will be ignored.
+
+```{r render, eval=F}
+# Create a html report
+rmarkdown::render('transcriptome-scPipe.Rmd')
+```
+
+```{bash eval=F}
+# Bash
+# Archive the results
+zip -r transcriptome-pipeline.zip --exclude=packrat/lib* demultiplexed packrat transcriptome-scPipe.Rmd transcriptome-scPipe.Rproj transcriptome-scPipe.html README.md LICENSE.txt
+```
