@@ -90,10 +90,10 @@ my_project_dir
 ├── packrat
 |   └── ...
 ├── <b>Samples_barcodes.csv</b>
-├── transcriptome-scpipe.Rmd
-├── transcriptome-scpipe.Rproj
 ├── LICENSE.txt
-└── README.md
+├── README.md
+├── transcriptome-scpipe.Rmd
+└── transcriptome-scpipe.Rproj
 </pre>
 
 ## Usage
