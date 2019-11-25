@@ -73,6 +73,11 @@ Place the `Samples_barcodes.csv` file in the main directory, then place your FAS
 The final directory structure should look like:
 <pre>
 my_project_dir
+├── aligment
+├── data
+├── demultiplexed
+├── packrat
+|   └── ...
 ├── run_data
 |   ├── <b>[lane1]R1.fastq.gz</b>
 |   ├── <b>[lane2]R1.fastq.gz</b>
