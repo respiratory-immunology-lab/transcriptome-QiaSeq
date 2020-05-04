@@ -10,7 +10,7 @@ Note: Commands described in this documentation assume that you are using a Unix 
 The minimal requirements are listed below then further detailed in this section:
 
 * **R 3.6.0:** https://www.r-project.org
-* **R packrat package:** https://cran.r-project.org/web/packages/packrat
+* **R package renv:** https://cran.r-project.org/web/packages/renv/index.html
 * **RStudio:** https://www.rstudio.com
 * **git:** https://git-scm.com/
 
@@ -18,15 +18,15 @@ The minimal requirements are listed below then further detailed in this section:
 
 The transcriptome-scPipe pipeline comes as a R package. Make sure that R (3.6.0 or higher) is installed before starting.
 
-#### R packrat package
+#### R renv package
 
-R packages are managed using packrat. This ensures maximal reproducibility and portability of the analysis by using an encapsulated, version controlled, installation of R packages instead of any system-level R packages installation.
+R packages are managed using renv. This ensures maximal reproducibility and portability of the analysis by using an encapsulated, version controlled, installation of R packages instead of any system-level R packages installation.
 
-Make sure that the packrat R package is installed before starting:
+Make sure that the renv R package is installed before starting:
 
 ```
 # R
-> install.packages("packrat")
+> install.packages("renv")
 ```
 
 #### RStudio
@@ -76,8 +76,9 @@ my_project_dir
 ├── aligment
 ├── data
 ├── demultiplexed
-├── packrat
+├── renv
 |   └── ...
+├── renv.lock
 ├── run_data
 |   ├── <b>[lane1]R1.fastq.gz</b>
 |   ├── <b>[lane2]R1.fastq.gz</b>
