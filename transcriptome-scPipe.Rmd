@@ -306,10 +306,10 @@ rmarkdown::render('transcriptome-scPipe.Rmd')
 # Move raw gene count table into data directory
 cp demultiplexed/gene_count.csv data/gene_count.txt
 
-# Archive the results
-tar -zcvf alignment
-tar -zcvf demultiplexed
-tar -zcvf renv
-tar -zcvf run_data
-tar -zcvf subread*
+# Archive the results directoryName.tar.gz directoryName/
+tar -zcvf alignment.tar.gz alignment/
+tar -zcvf demultiplexed.tar.gz demultiplexed/
+tar -zcvf renv.tar.gz renv/
+tar -zcvf run_data.tar.gz run_data/
+tar -zcvf subread.tar.gz subread*
 ```
