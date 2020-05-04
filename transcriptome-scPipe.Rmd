@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Copyright (c) 2019 Respiratory Immunology lab, Monash University, Melbourne, Australia.
+Copyright (c) 2020 Respiratory Immunology lab, Monash University, Melbourne, Australia.
 
 Converting RNA sequences from FASTQ files to a gene count table using the scPipe pipeline (R package `scPipe`). Full package documentation is available at https://github.com/LuyiTian/scPipe and original article can be found [here](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006361).
 
@@ -39,52 +39,35 @@ Place: (ex: Lambda sequencing facility)
 
 ## Environment setup
 
-Make sure you installed all required libaries **after** launching the `.Rproj` file and initialization with packrat using `packrat::init()`. Packrat will install packages into the `packrat/lib` directory. This takes a while but will not repeat after first installation.
+Make sure you installed all required libaries **after** launching the `.Rproj` file and initialization with renv using `renv::init()`. Use `renv::snapshot()` to save changes (eg. if you insttalled a new library). **You only need to run it once**. everything will be saved in the .Rprofile of the project.
 
-```{r packrat initialisation, eval=T}
+```{r renv initialisation, eval=F}
 # Initialise packrat
-packrat::init(project = '.', infer.dependencies = FALSE)
+renv::init(project = getwd(), bare = TRUE)
 ```
-
-*You only need to run this chunk once.*
 
 ```{r packages installation, eval=F, include=F}
 # Install required packages via Bioconductor
 if (!requireNamespace('BiocManager', quietly = TRUE))
     install.packages('BiocManager')
-BiocManager::install('Rsubread')
-
+BiocManager::install('scPipe')
+  
 # Install required packages via CRAN
-install.packages(c('evaluate', 'digest', 'highr', 'markdown', 'stringr', 'yaml', 'Rcpp', 'htmltools', 'knitr', 'jsonlite', 'base64enc', 'mime', 'rmarkdown','devtools', 'foreach', 'doParallel'))
+install.packages(c('rmarkdown','data.table'))
 
-# Install required packages via devtools
-devtools::install_github('LuyiTian/scPipe')
+# Save changes in renv environment
+renv::snapshot()
 ```
 
-*You need to run this chunk every time to load required packages.*
-
+Load required packages each time:
 ```{r environment setup, eval=T}
 # Load required R librairies
 version$version.string
 version$platform
 
-suppressMessages(library(Rsubread)); packageVersion('Rsubread')
-suppressMessages(library(evaluate)); packageVersion('evaluate')
-suppressMessages(library(digest)); packageVersion('digest')
-suppressMessages(library(highr)); packageVersion('highr')
-suppressMessages(library(markdown)); packageVersion('markdown')
-suppressMessages(library(stringr)); packageVersion('stringr')
-suppressMessages(library(yaml)); packageVersion('yaml')
-suppressMessages(library(Rcpp)); packageVersion('Rcpp')
-suppressMessages(library(htmltools)); packageVersion('htmltools')
-suppressMessages(library(knitr)); packageVersion('knitr')
-suppressMessages(library(jsonlite)); packageVersion('jsonlite')
-suppressMessages(library(base64enc)); packageVersion('base64enc')
-suppressMessages(library(mime)); packageVersion('mime')
-suppressMessages(library(rmarkdown)); packageVersion('rmarkdown')
-suppressMessages(library(foreach)); packageVersion('foreach')
-suppressMessages(library(doParallel)); packageVersion('doParallel')
 suppressMessages(library(scPipe)); packageVersion('scPipe')
+suppressMessages(library(rmarkdown)); packageVersion('rmarkdown')
+suppressMessages(library(data.table)); packageVersion('data.table')
 
 # Parallelization
 cores <- detectCores()
@@ -92,8 +75,7 @@ nc <- cores[1]
 if (nc > 3) {
   nc <- nc-1  # leave 1 core free if > 3 cores availables
 }
-cl <- makeCluster(nc)
-registerDoParallel(cl)
+
 paste(nc, 'cores used')
 
 # Set seed for pseudo-random numbers generation
@@ -114,15 +96,20 @@ cat run_data/*R2*fastq.gz > run_data/combined_R2.fastq.gz
 
 The scPipe workflow begins with paired-end FASTQ data which is passed to the function `sc_trim_barcode`, which reformats the reads by trimming the barcode and UMI from the reads and moving this information into the read header `@[barcode_sequence]*[UMI_sequence]#[readname] …`. There are options to perform some basic filtering in this step, including removing reads with low quality sequence in the barcode and UMI regions and filtering out low complexity reads, most of which are non-informative repetitive sequences such as polyA. The output FASTQ file contains transcript sequences, with barcode information merged into the read names. 
 
-If using the *Qiagen UPX transcriptomics kit* on a Illumina NextSeq platform (without custom primers), the run settings are as following: 
+### Settings without custom primers
+
+If using the *Qiagen UPX transcriptomics kit* on a Illumina platform *WITHOUT* custom primers, the run settings are as following: 
 
 - R1: 100 cycles
 - Single index: 6 cycles
 - R2: 50 cycles
 
-Fastq files are already demultiplexed based on <plate_index_6bp> sequences. A list of the Index sequences for this kit can be found on [Google Drive](https://drive.google.com/file/d/1i68FUhj8eRmY58NPGOue4cJz-uW06hA9/view?usp=sharing).
+Fastq files are already demultiplexed based on <plate_index_6bp> sequences. A list of the Index sequences for this kit can be found on [Google Drive](https://drive.google.com/file/d/1i68FUhj8eRmY58NPGOue4cJz-uW06hA9/view?usp=sharing). R2 structure is as following: 
 
-R2 structure is as following: QIAseq 25mer uPCR adapter, 10mer cell index (see `Cell_ID_Sequences.csv`), 12bp UMI, and ACG:
+- 25mer QIAseq uPCR adapter
+- 10mer cell index (see `Cell_ID_Sequences.csv`)
+- 12bp UMI
+- ACG
 
 **<AAGCAGTGGTATCAACGCAGAGTAC_25bp><cell_index_10bp><UMI_12bp><ACG>**
 
@@ -139,6 +126,39 @@ sc_trim_barcode('run_data/combined_R1R2.fastq.gz',
                 fq_R1,
                 fq_R2,
                 read_structure = list(bs1=-1, bl1=0, bs2=25, bl2=10, us=35, ul=12),
+                filter_settings = list(rmlow = TRUE, rmN = TRUE, minq = 20, numbq = 2))
+```
+
+### Settings with custom primers
+
+If using the *Qiagen UPX transcriptomics kit* on a Illumina NovaSeq platform *WITH* custom primers, the run settings are as following: 
+
+- R1: 103 cycles
+- No index cycles (all the same index if sequencing 96 samples at the same time)
+- R2: 27 cycles
+
+In brief, we get rid of the QIAseq uPCR adapter. R2 structure is as following: 
+
+- 10mer cell index (see `Cell_ID_Sequences.csv`)
+- 12bp UMI
+- ACG
+- 2 extra bases
+
+**<cell_index_10bp><UMI_12bp><ACG><NN>**
+    
+`bs1=-1`, `bl1=0` means we don’t have an index in read 1 so we set a negative value as its start position and give it zero length.` bs2=0`, `bl2=10` means we have an index in R2 which starts at position 0 (first base) in the read and is 10 bases long. `us=10`, `ul=12` means we have a UMI at position 10 of R2 which is 12 bases long. 
+
+**Note**: It is a zero based index system, so the indexing of the sequence starts at zero!
+
+```{r reformatting with primers, eval=F}
+fq_R1 <- 'run_data/combined_R1.fastq.gz'
+fq_R2 <- 'run_data/combined_R2.fastq.gz'
+
+# Trim barcodes and create fastq file
+sc_trim_barcode('run_data/combined_R1R2.fastq.gz',
+                fq_R1,
+                fq_R2,
+                read_structure = list(bs1=-1, bl1=0, bs2=0, bl2=10, us=10, ul=12),
                 filter_settings = list(rmlow = TRUE, rmN = TRUE, minq = 20, numbq = 2))
 ```
 
@@ -281,9 +301,15 @@ Finally, create a html report and archive it along with final data, figures, pac
 # Create a html report
 rmarkdown::render('transcriptome-scPipe.Rmd')
 ```
-
 ```{bash eval=F}
 # Bash
+# Move raw gene count table into data directory
+cp demultiplexed/gene_count.csv data/gene_count.txt
+
 # Archive the results
-zip -r transcriptome-pipeline.zip --exclude=packrat/lib* demultiplexed packrat transcriptome-scPipe.Rmd transcriptome-scPipe.Rproj transcriptome-scPipe.html README.md LICENSE.txt
+tar -zcvf alignment
+tar -zcvf demultiplexed
+tar -zcvf renv
+tar -zcvf run_data
+tar -zcvf subread*
 ```
