@@ -55,6 +55,14 @@ Before starting, make sure you have the five files listed below:
 4. A reference genome in fasta format: For example, `Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz`
 5. A gene annotation file in GFF3 format: For example, `Homo_sapiens.GRCh38.98.gff3.gz`
 
+```
+# Download genome
+wget http://ftp.ensembl.org/pub/release-98/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz
+
+# Download gene annotation file
+wget http://ftp.ensembl.org/pub/release-98/gff3/homo_sapiens/Homo_sapiens.GRCh38.98.gff3.gz
+```
+
 It is assumed that the FASTQ files were archived using gzip.
 
 (1) The `Samples_barcodes.csv` file must contain two comma-delimited columns: the first for samples names and the second for samples barcodes as shown <a href="https://drive.google.com/file/d/1MQtRGfdJSjdvb8NeWTaA8_fcV82NiDZm/view?usp=sharing" target="_blank">here</a>. Avoid special characters.
