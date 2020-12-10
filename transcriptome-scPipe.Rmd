@@ -27,8 +27,6 @@ Project: (ex: Myproject)
 
 Run ID: (ex: run01)
 
-Type: (ex: bacterial 16S rRNA gene amplicons v1-v2/F27-R338)
-
 Platform: (ex: Illumina NextSeq)
 
 Kit: (ex: Illumina NextSeq 500/550 High-Output v2.5 Kit (R1 100 cycles, Index 6 cycles, R2 50 cycles))
@@ -58,6 +56,7 @@ install.packages(c('rmarkdown','data.table'))
 # Save changes in renv environment
 renv::snapshot()
 ```
+Note: there is an issue with `hashmap` package as it is no longer in CRAN. Get the archive version and install it separately before reinstalling `scPipe`.
 
 Load required packages each time:
 ```{r environment setup, eval=T}
@@ -84,12 +83,12 @@ set.seed(2)
 
 ## Merge fastq files
 
-Illumina NextSeq machines have four physical lanes and produces eight fastq files per sample, i.e. four R1 and four R2 fastq files. Because we are running the same library on the different lanes, we will first concatenate all R1 and all R2 files together, respectively. Typically, the concatenated files are ~20GB for R1 and ~10GB for R2.
+Illumina machines sometimes have physical lanes and produce multiple fastq files per sample. Because we are running the same library on the different lanes, we will first concatenate all R1 and all R2 files together, respectively.
 
 ```{bash, eval=F}
 # bash
-cat run_data/*R1*fastq.gz > run_data/combined_R1.fastq.gz
-cat run_data/*R2*fastq.gz > run_data/combined_R2.fastq.gz
+cat *R1*fastq.gz > combined_R1.fastq.gz
+cat *R2*fastq.gz > combined_R2.fastq.gz
 ```
 
 ## Fastq filtering and reformatting
@@ -100,8 +99,8 @@ The scPipe workflow begins with paired-end FASTQ data which is passed to the fun
 
 If using the *Qiagen UPX transcriptomics kit* on a Illumina platform *WITHOUT* custom primers, the run settings are as following: 
 
-- R1: 100 cycles
-- Single index: 6 cycles
+- R1: 80-150 cycles (depending on the kit)
+- No index cycles (all the same index if sequencing 96 samples at the same time)
 - R2: 50 cycles
 
 Fastq files are already demultiplexed based on <plate_index_6bp> sequences. A list of the Index sequences for this kit can be found on [Google Drive](https://drive.google.com/file/d/1i68FUhj8eRmY58NPGOue4cJz-uW06hA9/view?usp=sharing). R2 structure is as following: 
@@ -133,7 +132,7 @@ sc_trim_barcode('run_data/combined_R1R2.fastq.gz',
 
 If using the *Qiagen UPX transcriptomics kit* on a Illumina NovaSeq platform *WITH* custom primers, the run settings are as following: 
 
-- R1: 103 cycles
+- R1: R1: 80-150 cycles (depending on the kit)
 - No index cycles (all the same index if sequencing 96 samples at the same time)
 - R2: 27 cycles
 
