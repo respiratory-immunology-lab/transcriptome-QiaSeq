@@ -66,6 +66,7 @@ version$platform
 
 suppressMessages(library(scPipe)); packageVersion('scPipe')
 suppressMessages(library(rmarkdown)); packageVersion('rmarkdown')
+suppressMessages(library(Rsubread)); packageVersion('Rsubread')
 suppressMessages(library(data.table)); packageVersion('data.table')
 
 # Parallelization
