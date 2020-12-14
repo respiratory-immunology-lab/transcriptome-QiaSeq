@@ -183,8 +183,9 @@ The next stage of preprocessing involves sequence alignment. By default, scPipe 
 
 ```{r alignment, eval=F}
 # Alignment
-# Replace by the right path to your index files
-align(index='/home/celinepattaroni/celine.pattaroni@monash.edu/03_Bioinformatics/Databases/Human/Indexing/Homo_sapiens.GRCh38.dna.primary_assembly_index',
+# Replace by the right path to your annotation file
+in.fp <- '~/Homo_sapiens.GRCh38.dna.primary_assembly_index'
+align(index=in.fp,
       readfile1='run_data/combined_R1R2.fastq.gz',
       output_file='alignment/out.aln.bam', nthreads=nc)
 ```
@@ -196,7 +197,7 @@ Aligned reads in the BAM file are then assigned to exons by the `sc_exon_mapping
 ```{r mapping, eval=F}
 # Path to annotation file
 # Replace by the right path to your annotation file
-an.fp <- '~/celine.pattaroni@monash.edu/03_Bioinformatics/Databases/Human/Homo_sapiens.GRCh38.98.gff3.gz'
+an.fp <- '~/Homo_sapiens.GRCh38.98.gff3.gz'
 
 # Exon mapping
 sc_exon_mapping(inbam = 'alignment/out.aln.bam',
