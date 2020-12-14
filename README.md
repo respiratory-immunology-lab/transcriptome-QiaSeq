@@ -113,6 +113,10 @@ my_project_dir
 
 3. Store archives in a safe place!
 
+## Run it on the cluster
+
+One possibility is to run it on an interactive smux session. The setting is: `smux n --ntasks=20 --mem=50000 -J Qiagen --nodes=1 --time=3-00:00:00`.
+
 ## Citation
 
 If you used this repository in a publication, please mention its url.
