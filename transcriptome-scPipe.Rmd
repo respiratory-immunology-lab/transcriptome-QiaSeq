@@ -27,9 +27,9 @@ Project: (ex: Myproject)
 
 Run ID: (ex: run01)
 
-Platform: (ex: Illumina NextSeq)
+Platform: (ex: Illumina NovaSeq)
 
-Kit: (ex: Illumina NextSeq 500/550 High-Output v2.5 Kit (R1 100 cycles, Index 6 cycles, R2 50 cycles))
+Kit: (ex: Illumina NovaSeq Kit (R1 100 cycles, Index 6 cycles, R2 50 cycles))
 
 Date: 
 
@@ -179,7 +179,7 @@ buildindex(basename='Homo_sapiens.GRCh38.dna.primary_assembly_index', reference=
 
 The next stage of preprocessing involves sequence alignment. By default, scPipe uses R based `Rsubread` aligner. It performs local read alignment and reports the largest mappable region for each read, with unmapped read bases being soft-clipped. Its unique seed-and-vote design makes it suitable for RNA-seq as well as for genomic DNA sequencing experiments.
 
-**Note**: `align` function needs 17.8GB of memory for read mapping. If a gap index has been created in the previous step, it is possible to use less memory. In addition, is advised to save your working environment and restart R before running the alignment, as the function easily crashes.
+**Note**: `align` function needs at least 20GB of memory for read mapping. If a gap index has been created in the previous step, it is possible to use less memory. In addition, is advised to save your working environment and restart R before running the alignment, as the function easily crashes.
 
 ```{r alignment, eval=F}
 # Alignment
