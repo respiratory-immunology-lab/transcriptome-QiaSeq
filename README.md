@@ -42,7 +42,7 @@ If not done yet, install git.
 
 On debian linux, you can install git using the `apt-get` package manager command:
 ```
-$ apt-get install git
+apt-get install git
 ```
 
 ## Files
@@ -71,9 +71,9 @@ It is assumed that the FASTQ files were archived using gzip.
 
 Get a copy of this repository (give it any name `my_project_dir`) and set it as your working directory:
 ```
-$ git clone https://github.com/respiratory-immunology-lab/trancriptome-scPipe.git
- my_project_dir
-$ cd my_project_dir
+git clone https://github.com/respiratory-immunology-lab/trancriptome-scPipe.git
+my_project_dir
+cd my_project_dir
 ```
 If not done yet, get a copy of the reference databases of your choice. We recommend using Ensembl repository: https://asia.ensembl.org/info/data/ftp/index.html.
 
@@ -115,7 +115,7 @@ my_project_dir
 
 ## Run it on the cluster
 
-One possibility is to run it on an interactive smux session. The setting is: `smux n --ntasks=20 --mem=50000 -J Qiagen --nodes=1 --time=3-00:00:00`.
+One possibility is to run it on an interactive smux session. The setting is: `smux n --nodes=1 --ntasks=1 --cpuspertask=36 --mem=100000 -J Qiagen --time=5-00:00:00`.
 
 ## Citation
 
