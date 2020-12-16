@@ -70,7 +70,7 @@ suppressMessages(library(Rsubread)); packageVersion('Rsubread')
 suppressMessages(library(data.table)); packageVersion('data.table')
 
 # Parallelization
-cores <- detectCores()
+cores <- detectCores(logical = FALSE)
 nc <- cores[1]
 if (nc > 3) {
   nc <- nc-1  # leave 1 core free if > 3 cores availables
