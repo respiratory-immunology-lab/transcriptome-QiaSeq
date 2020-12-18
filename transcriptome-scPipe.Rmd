@@ -126,7 +126,7 @@ sc_trim_barcode('run_data/combined_R1R2.fastq.gz',
                 fq_R1,
                 fq_R2,
                 read_structure = list(bs1=-1, bl1=0, bs2=25, bl2=10, us=35, ul=12),
-                filter_settings = list(rmlow = TRUE, rmN = TRUE, minq = 20, numbq = 2))
+                filter_settings = list(rmlow = TRUE, rmN = TRUE, minq = 20, numbq = 1))
 ```
 
 ### Settings with custom primers
