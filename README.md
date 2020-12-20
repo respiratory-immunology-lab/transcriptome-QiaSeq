@@ -115,7 +115,7 @@ my_project_dir
 
 ## Run it on the cluster
 
-One possibility is to run it on an interactive smux session. The setting is: `smux n --nodes=1 --ntasks=1 --cpuspertask=1 --mem=300000 -J Qiagen --time=2-00:00:00`.
+One possibility is to run it on an interactive smux session. The setting is: `smux n --nodes=1 --ntasks=36 --cpuspertask=1 --mem=50G -J Qiagen --time=5-00:00:00`.
 
 ## Citation
 
