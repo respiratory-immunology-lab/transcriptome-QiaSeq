@@ -48,7 +48,7 @@ renv::init(project = getwd(), bare = TRUE)
 # Install required packages via Bioconductor
 if (!requireNamespace('BiocManager', quietly = TRUE))
     install.packages('BiocManager')
-BiocManager::install('scPipe')
+BiocManager::install('scPipe', 'Rsubread')
   
 # Install required packages via CRAN
 install.packages(c('rmarkdown','data.table'))
