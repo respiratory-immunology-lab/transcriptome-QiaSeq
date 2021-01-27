@@ -164,7 +164,7 @@ sc_trim_barcode('run_data/combined_R1R2.fastq.gz',
 
 ## Genome indexing
 
-Before assembly, we first need to index the human reference genome for further usage using the `Rsubread` package. This is a once-off operation for each reference genome, as the same index file can be used for multiple projects and stored. The Ensembl human genome DNA fasta files and Gene sets GFF3 files can be found [here](https://asia.ensembl.org/info/data/ftp/index.html). All files are available on my [Google Drive](https://drive.google.com/open?id=1tGuYByOP-iztPQnNoFF56owdlWeGC3JG).
+Before assembly, we first need to index the human reference genome for further usage using the `Rsubread` package. This is a once-off operation for each reference genome, as the same index file can be used for multiple projects and stored. The Ensembl human genome DNA fasta files and Gene sets GFF3 files can be found [here](https://asia.ensembl.org/info/data/ftp/index.html).
 
 **Note**: `buildindex` function needs 15GB of memory to build a full index for human/mouse genome. A gapped index is recommended for use on a personal computer, which typically has 16GB of memory or less. In addition, is advised to save your working environment and restart R before running the alignment, as the function easily crashes.
 
@@ -293,6 +293,13 @@ dim(sce.qc)
 # Save data
 fwrite(counts(sce.qc), 'data/gene_count_filtered.csv', quote = FALSE, sep = ',')
 ```
+## Add gene IDs and other info
+
+```
+organism(sce) <- 'hsapiens_gene_ensembl' # or mmusculus_gene_ensembl for mouse data
+gene_id_type(sce) <- 'ensembl_gene_id'
+sce <- convert_geneid(sce, returns = 'external_gene_name', all = TRUE)
+```
 
 ## Wrapping Up
 
@@ -301,16 +308,4 @@ Finally, create a html report and archive it along with final data, figures, pac
 ```{r render, eval=F}
 # Create a html report
 rmarkdown::render('transcriptome-scPipe.Rmd')
-```
-```{bash eval=F}
-# Bash
-# Move raw gene count table into data directory
-cp demultiplexed/gene_count.csv data/gene_count.txt
-
-# Archive the results directoryName.tar.gz directoryName/
-tar -zcvf alignment.tar.gz alignment/
-tar -zcvf demultiplexed.tar.gz demultiplexed/
-tar -zcvf renv.tar.gz renv/
-tar -zcvf run_data.tar.gz run_data/
-tar -zcvf subread.tar.gz subread*
 ```
