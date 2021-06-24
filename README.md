@@ -117,6 +117,31 @@ my_project_dir
 
 One possibility is to run it on an interactive smux session. The setting is: `smux n --nodes=1 --ntasks=36 --cpuspertask=1 --mem=50G -J Qiagen --time=5-00:00:00`.
 
+## Wrapper script to get demultiplexed fastq files for upload to SRA
+
+```
+# Generate a white barcode list 
+module load umi-tools
+umi_tools whitelist --stdin R2_merged.fastq.gz \
+--bc-pattern CCCCCCCCCCNNNNNNNNNNNN \
+--set-cell-number 96 \
+ --log2stderr > whitelist.txt;
+
+# Extract barcodes and add it to R1
+umi_tools extract --bc-pattern=CCCCCCCCCCNNNNNNNNNNNN \
+--error-correct-cell \
+--reconcile-pairs \
+--stdin R2_merged.fastq.gz \
+--stdout R2_merged_extracted.fastq.gz \
+--read2-in R1_merged.fastq.gz \
+--read2-out R1_merged_extracted.fastq.gz \
+--whitelist=whitelist.txt; 
+
+# Demultiplex by barcode name 
+module load bbmap
+demuxbyname.sh -Xmx4g in=R1_merged_extracted.fastq.gz out=BC_%.fastq.gz delimiter=_ column=2
+```
+
 ## Citation
 
 If you used this repository in a publication, please mention its url.
